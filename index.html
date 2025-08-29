@@ -2,62 +2,56 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Roblox IP Check</title>
-</head>
-<body>
-<div id="result"></div>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IP Check</title>
 <script>
-  // Convert IPv4 address to a number
-  function ipToLong(ip) {
+  const robloxDatacenterIPs = [
+    "173.234.0.0/16",
+    "103.86.0.0/16",
+  ];
+
+  function ipInRange(ip, range) {
+    const [rangeIp, subnet] = range.split('/');
+    const ipNum = ipToNumber(ip);
+    const rangeIpNum = ipToNumber(rangeIp);
+    const mask = Math.pow(2, 32) - Math.pow(2, 32 - subnet);
+    return (ipNum & mask) === (rangeIpNum & mask);
+  }
+
+  function ipToNumber(ip) {
     return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0);
   }
 
-  // Check if IP is in CIDR range
-  function ipInRange(ip, range) {
-    const [rangeIp, subnet] = range.split('/');
-    const ipLong = ipToLong(ip);
-    const rangeIpLong = ipToLong(rangeIp);
-    const mask = ~(2 ** (32 - parseInt(subnet)) - 1);
-    return (ipLong & mask) === (rangeIpLong & mask);
-  }
+  async function checkIp() {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      const visitorIp = data.ip;
 
-  const allowedRanges = [
-    '128.116.0.0/17',
-    '23.173.192.0/24',
-    '141.193.3.0/24',
-    '204.9.184.0/24',
-    '205.201.62.0/24',
-    '204.13.168.0/24',
-    '204.13.169.0/24',
-    '204.13.170.0/24',
-    '204.13.171.0/24',
-    '204.13.172.0/24',
-    '204.13.173.0/24',
-    '103.140.28.0/23',
-    '209.206.40.0/21',
-    '103.142.220.0/24',
-    '103.142.221.0/24'
-  ];
-
-  fetch('https://api.ipify.org?format=json')
-    .then(response => response.json())
-    .then(data => {
-      const userIp = data.ip;
-      let isAllowed = false;
-
-      for (const range of allowedRanges) {
-        if (ipInRange(userIp, range)) {
-          isAllowed = true;
+      let isRobloxDatacenter = false;
+      for (const range of robloxDatacenterIPs) {
+        if (ipInRange(visitorIp, range)) {
+          isRobloxDatacenter = true;
           break;
         }
       }
 
-      document.getElementById('result').textContent = isAllowed ? '87299281605661' : '1';
-    })
-    .catch(() => {
-      document.getElementById('result').textContent = 'Error fetching IP';
-    });
+      const output = document.getElementById('result');
+      if (isRobloxDatacenter) {
+        output.textContent = "0x4f65f2ab541d";
+      } else {
+        output.textContent = "191816425";
+      }
+    } catch (error) {
+      console.error('Error checking IP:', error);
+      document.getElementById('result').textContent = 'Error determining IP type.';
+    }
+  }
+
+  window.onload = checkIp;
 </script>
+</head>
+<body>
+<p id="result"></p>
 </body>
 </html>
